@@ -1,0 +1,16 @@
+analysis:
+  clustering_resolution: 1
+feature_selection:
+  bin_size: 5000
+  num_features: 50000
+io:
+  chunk_size: 2000
+  min_load_num_fragments: 1000
+  sorted_by_barcode: false
+  save_intermediate: true
+  gene_activity: false
+qc:
+  max_num_fragments: 60000
+  min_num_fragments: 1000
+  min_tsse: 12
+  additional_doublets: /cellar/users/aklie/data/datasets/islet_10X-Multiome/results/sample_annotation/amulet_bcs.txt
