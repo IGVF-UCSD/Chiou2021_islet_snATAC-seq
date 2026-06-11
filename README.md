@@ -1,118 +1,63 @@
-# Starting with a new dataset
-
-# Preparing for your data
-
-## IGVF datasets
-
-- If you are working with an IGVF dataset, I recommend you just generate a new repository from the https://github.com/IGVF-UCSD/dataset_template repo and clone that to wherever you are working
-
-## Non-IGVF datasets
-
-- Create a new folder on the cluster that will house your data
-- Create a GitHub repo and link this to the new folder
-- Follow the directory structure outlined here: https://github.com/IGVF-UCSD/dataset_template
-
-## Tips
-
-- Name your dataset something descriptive and machine readable (no spaces!)
-
-# Data acquisition
-
-The data you are about to start working with inevitably exists somewhere other than our cluster, so we will need to move it over from where it currently is. This is sometimes non-trivial, so I’ve put together some code to help with different scenarios depending on where the data starts out (https://github.com/IGVF-UCSD/single_cell_utilities/tree/main/data_acquisition). You will likely need to write some custom scripts based on these to transfer the some combination of the follwowing
-
-1. **Raw fastqs** —> these should be deposited within a `fastq/`subdirectory in your main dataset directory. Include the date of acquisition
-2. **Processed** —> the exact form of this can vary substantially, but the outputs should be placed in a `processed/` subdirectory within the main directory. Include the date of acquisition
-3. ******************Annotated****************** —> the exact form of this can vary substantially, but the outputs should be placed in an `annotation/` subdirectory within the main directory. Include the date of acquisition
-4. **Analysis** products —> the exact form of this can vary substantially, but the outputs should be placed in an `analysis/` subdirectory within the main directory. Include the date of acquisition
-5. ****************Metadata**************** —> the exact form of this can vary substantially, but the outputs should be placed in a `metadata/` subdirectory within the main directory. Include the date of acquisition
-
-Before you move on, add a well-documented, short notebook describing the process of acquiring it to the `bin/` directory.
-
-# Data processing
-
-Data will usually come in either as raw sequencing **fastq** files, or in already processed and analyzed formats. If it is the former, you will need to process the data yourself. There are many ways to do this, and I have provided some code and pipelines you can run to get to the processed state. A couple things to note:
-
-- Make sure that you version your processing pipeline, similar to data acquisition. Stick the results in a subdirectory within the`processed/` subdirectory with a date (e.g. `08Sep23`).
-- Make sure the processing is reproducible in some way…TODO
-
-# Data annotation
-
-Most of the current downstream analyses performed on single cell data rely on being able to group cells together by some sort of biologically relevant property. This is most commonly cell-type, but can be the results of a more nuanced clustering of data as well (or a known covariate). The goal of this section is to get to those annotations through a sort of preliminary analysis of the data. This usually includes:
-
-1. Computing quality control metrics on each sample within a dataset
-2. Filtering low quality cells based on the computed metrics
-3. Normalizing the data to deal with unwanted properties of the dataset (e.g. unstable variance across features)
-4. Integrating samples to get all cells in the same feature space and to correct for unwanted technical variation (horizontal integration)
-5. Integrating modalities (vertical or diagonal integration) to project a cell into a single feature space that captures multiple experimental observations
-6. Clustering based on these feature spaces
-7. Automatic annotation of clusters as a first pass
-8. Manual refinement of annotation by experts
-
-It is also possible that the data received has already undergone one or more of these steps already. **If this is the case, I recommend that you put together a few notebooks where you skeptically investigate the data in as many ways as possible.**
-
-Whatever route you end up taking, create the following in a new `annotation/` subdirectory:
-
-1. `{DatasetID}_CellClusterAssignment.tsv` — a metadata table with **one row per barcode** that includes:
-    - bc
-    - CellClusterID
-    - RNAUMI
-    - RNAGenes
-    - ATACFragments (if multiome)
-    - Any other additional columns you want (e.g. %mito, %ribo etc.)
-2. `{DatasetID}_ClusterMetadata.tsv` — a separate table with cluster level metadata. This one should be **one row per cluster** and include:
-    - CellClusterID — should match above for barcodes (e.g. the unique IDs here should exactly match the unique IDs in the CellCluster column above)
-    - ManualAnnotationLabel —
-    - nCells
-    - MeanRNAUMIsPerCell
-    - MeanATACFragmentsPerCell
-3. `{DatasetID}_thresholds.tsv` — a separate table of per sample thresholds used for filtering cells (if different ones were used per sample)
-
-Other useful files to generate during this stage include:
-
-1. `reductions/` —> any dimensionality reductions
-2. `loadings/` —> any feature loadings
-3. `qc/` —> if per sample qc was done first
-
-# Data analysis
-
-Once you have a confident set of annotations, there are set of relatively general analysis steps you can perform. These are distinguished from more specific downstream analysis tasks that will depend on experimental design (e.g. these will likely be applicable to almost any single cell dataset). These include:
-
-1. Identifying cluster markers for features at single cell resolution
-2. Create pseudobulk representations of the dataset for each metadata field of interest. Put these in a subdirectory called `pseudobulk`. Note that this will depend on the assay, but the concept should be the same. Some examples:
-    - A `tagAlign` for ATAC
-    - A `tsv` for RNA
-3. Summarizing features at pseudobulk resolution:
-    - Identifying cluster markers
-    - Calling peaks for ATAC
-4. Creating feature matrices from called summarized features
-    - fragment x cell matrices for ATAC
-
-A couple reminders:
-
-- **Version this data as well!** You may end up modifiying cluster assignments, or using a different tool for generating pseudobulks
-
-# Data submission
-
-Finally, if the dataset gets published, or you are a part of a consortium, you will need to submit the data. This usually involves creating a metadata table that points to all relevant files and running some kind of command line submission script. I will be adding resources to this as the pipeline for it becomes more robust, but a couple tips:
-
-- Make sure you fully understand the experimental set-up prior to generating a metadata table. You should understand the nuances, including but not limited to the number of samples, number of biological replicates per sample, the number of technical replicates per sample, the sequencer used, the library protocol used, etc.
-- Come up with a unique identifier **per file** that captures the
-    - biosample type (e.g. condition, timepoint etc.) — 0hr_control (if relevant)
-    - the sample ID (e.g. patient ID or internal sample ID) — DM0b
-    - the modality used — scRNA, scATAC
-    - the technical replicate number — _1 (shallow), _3 (deep)
-    - the lane/plate of sequencing - 1, 2, 3, 4, 13G etc.
-    - the read type - R1, R2, I1, R3
-    
-    An example could be `scATAC_24hr_3-cyt_dm21a_fastq_2_1_R1` which is the modality, biosample type, sample ID, file type (optional), lane, tehcnical replicate number and read type.
-    
-
-# Some final TODOs
-
-- Create a README that documents the major steps followed for this dataset, and highlights any nuances worth noting
-- You likely won’t be able to host most of the actual data files on GitHub due to their size. So make sure that you provide a link to the publicly available data files prior to publishing this repo. Also provide some code for someone to be able to download and hit the ground running
-
-# A note on data wrangling
-
-Inevitably, analysis tools require data to be written to disk in different formats to be usable. If you started from raw data, this usually isn’t a problem. If you were given some processed version of the data, it will likely be written to disk in a specific format (e.g. an special hdf5 file called `h5ad` for [Scanpy](https://www.notion.so/Scanpy-cc1d7c2ba4f447f79cbc43aebf991742?pvs=21) ). If you want to do an analysis in R, you’ll have to convert things. Unfortunately, this is very non-trivial and improper conversions can lead to a lot confusion and improper downstream analysis. To mitigate this, I’ve put together some code that covers many data wrangling cases in a reproducible fashion: https://github.com/IGVF-UCSD/single_cell_utilities/tree/main/data_wrangling. Note, that because many formats are tool specific, this code is mainly organized by tool.
 # Chiou2021_islet_snATAC-seq
+
+Public snATAC-seq atlas of primary human pancreatic islet / whole pancreas (Chiou et al. 2021), reprocessed in-house with chromap + SnapATAC2 and used as a primary-islet comparator and ChromBPNet training source for the stimulated SC-islet project.
+
+## Source
+- **Reference:** Chiou J, Zeng C, Cheng Z, et al. Single-cell chromatin accessibility identifies pancreatic islet cell type- and state-specific regulatory programs of diabetes risk. *Nature Genetics*. 2021;53:455-466. doi:10.1038/s41588-021-00823-0
+- **Accession(s):** GEO GSE160472 / SRA SRP290255 (snATAC-seq sub-study). 5 SRR runs: SRR12957013-SRR12957016, SRR14135828.
+- **Provenance:** Raw FASTQs pulled from SRA via `bin/data_acquisition/1_sra_download.{ipynb,py,sh}`; supplementary/processed cluster labels and HVW peaks pulled from the publication into `ref/publication/`.
+- **Local path:** `/cellar/users/aklie/data/datasets/Chiou2021_islet_snATAC-seq/` (symlinked from `public-data/Chiou2021_islet_snATAC-seq/`)
+
+## Study design
+- **Organism:** Homo sapiens
+- **Assay:** snATAC-seq (Combinatorial Barcoding "CB" platform + 10x Chromium scATAC), paired-end Illumina (HiSeq 2500, NextSeq 500)
+- **Conditions:** Non-diabetic donors only in this download (the Chiou 2021 paper additionally profiled T2D donors via scRNA-seq; T2D snATAC samples are not represented in the 5 SRRs cached here)
+- **Samples (5 libraries / 4 donors):**
+  - `UNOS_AFC2208` — pancreatic islets, M, 32y, BMI 32.3 (Islet 1, CB)
+  - `UNOS_AFEA331` — pancreatic islets, M, 45y, BMI 29.3 (Islet 2, CB)
+  - `UNOS_AFEP022` — pancreatic islets, M, 62y, BMI 36.1 (Islet 3, CB)
+  - `nPOD_6004_CB` — whole pancreas, M, 33y, BMI 30.9 (Pancreas 1, CB)
+  - `nPOD_6004_10x` — whole pancreas, M, 33y, BMI 30.9 (Pancreas 1, 10x — paired with `nPOD_6004_CB`)
+- **Genome build:** hg38 (chromap reference; `ref/publication/hg38_lif_islet.hvw.bed` indicates lift-over to hg38)
+- **Cell-type labels (from publication, `ref/publication/islet.cluster_labels.txt`):** alpha_1/2, beta_1/2, delta_1/2, gamma, acinar, ductal, stellate, endothelial, immune
+- **Cell count:** _TODO_: confirm post-QC cell count for the in-house reprocessing (paper reports ~14k islet nuclei + pancreas; TODAY.md "~18k cells" claim refers to a different Chiou-related combo and should not be quoted here)
+
+## What's here
+```
+bin/
+  data_acquisition/      SRA + GEO download notebooks; SRP290255_metadata.tsv, SRP290255_srr_ids.txt
+  data_processing/       chromap + cellranger-atac wrappers (run_chromap_on_{10x,CB}.sh, SLURM_ARRAY_run_cellranger-atac.sh)
+  sample_annotation/     SnapATAC2 per-sample QC + clustering driver (process_ATAC.sh + scripts/)
+  integration/           Cross-sample integration, cluster annotation, peak calling, peak analysis (5 stages)
+  sequence_models/       ChromBPNet + BPNet-lite training (chromBPNetLitePipeline.sh, chrombpnet/, runs/fold_0.sh, create_seqdata.ipynb, train_model.ipynb)
+  slurm_logs/
+metadata/
+  sample_metadata.tsv               5-row donor table
+  2024_04_22/snapatac2_process.tsv  per-sample annotation manifest
+  2024_06_03/snapatac2_integrate.tsv integration manifest
+processed/
+  chromap/                          5 sample dirs of chromap fragment outputs
+ref/
+  islet.marker_genes.csv, islet_marker_genelist.txt, cellid_colors.csv
+  islet_tf_motifs.meme.txt, motifs.meme.txt
+  publication/                      paper-supplied cluster labels, QC metrics, HVW peak sets (hg19 + hg38 lifted)
+results/
+  sample_annotation/                per-sample SnapATAC2 outputs (5 sample dirs)
+  integration/atac/                 merged + annotated h5ads, paper_annotations.h5ad, peak_calls/, peak_matrices/, fragments/, coverage/, filtered_peaks/, umap.png
+  sequence_models/
+    chrombpnet/chrombpnet/fold_0/   trained ChromBPNet model (fold 0 of 5; folds 1-4 have negatives + auxiliary only)
+    bpnet-lite/fold_0/              BPNet-lite training output
+    eugene/, insertion_counts/, loci/, zarrs/   intermediate sequence-data artifacts
+```
+
+## Status
+- **Pipeline state:** model-trained (ChromBPNet fold 0; folds 1-4 prepared but training _TODO_: confirm)
+- **Latest run:** 2024_06_05 (notebook timestamps in `bin/integration/` and `bin/sequence_models/`)
+- **Current limitation / blocker:** Only 1 of 5 ChromBPNet folds has a fully trained model on disk; integration QA (`5_viz_python.ipynb`) was the last touch. Genome-build / gene-naming verification still needed before joint integration with Maestas/Wang per issue #10.
+- **Owner:** aklie
+
+## Use in this project
+- **Why we have it:** Primary-islet snATAC reference for the stimulated SC-islet project — provides T2D-relevant chromatin accessibility, paper-curated cell-type labels, and a ChromBPNet model trained on a non-stimulated primary-islet baseline for comparison against in-house treated SC-islet and EndoC models.
+- **Linked issues:** IGVF-UCSD/.github #10 (primary islet integration: Chiou + Maestas + Wang)
+- **Scratch workspace:** _TODO_: no dedicated scratch dir under `igvf-data/igvf_sc-islet_10X-Multiome/scratch/` was confirmed for this dataset
+- **Manuscript:** ChromBetaNet (sequence-model comparator); beta_cell_networks (primary-islet reference for cell-type label transfer)
